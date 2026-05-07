@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TheSecretPlace" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="Theme.TheSecretPlace.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1A1F35</item>
+        <item name="postSplashScreenTheme">@style/Theme.TheSecretPlace</item>
+    </style>
+</resources>
