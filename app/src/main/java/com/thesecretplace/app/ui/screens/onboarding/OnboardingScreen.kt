@@ -90,21 +90,6 @@ fun OnboardingScreen(onComplete: (String) -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(100.dp))
 
-            // App icon glow
-            Box(contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .size(88.dp)
-                        .background(
-                            Accent.copy(alpha = 0.14f),
-                            shape = androidx.compose.foundation.shape.CircleShape
-                        )
-                )
-                Text("🧘", fontSize = 50.sp)
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
             // App name
             Text(
                 text = "The Secret Place",

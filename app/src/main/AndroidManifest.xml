@@ -8,8 +8,8 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
-    <uses-permission android:name="android.permission.health.WRITE_MINDFULNESS" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <application
@@ -17,7 +17,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="The Secret Place"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TheSecretPlace">
 

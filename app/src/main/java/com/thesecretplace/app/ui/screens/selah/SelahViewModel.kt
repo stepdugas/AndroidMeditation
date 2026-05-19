@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thesecretplace.app.data.PreferencesManager
+import com.thesecretplace.app.health.HealthConnectManager
 import com.thesecretplace.app.service.AudioServiceConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -28,7 +29,8 @@ enum class AmbientSound(val displayName: String, val fileName: String?) {
 @HiltViewModel
 class SelahViewModel @Inject constructor(
     private val prefs: PreferencesManager,
-    private val audioConnection: AudioServiceConnection
+    private val audioConnection: AudioServiceConnection,
+    private val healthConnect: HealthConnectManager
 ) : ViewModel() {
 
     init {
@@ -128,6 +130,12 @@ class SelahViewModel @Inject constructor(
         }
         prefs.totalSessionsCompleted++
         prefs.totalMinutesMeditated += _selectedMinutes.value
+
+        // Log to Health Connect
+        if (prefs.healthConnectEnabled) {
+            val durationMs = _selectedMinutes.value * 60_000L
+            viewModelScope.launch { healthConnect.logMindfulSession(durationMs) }
+        }
 
         println("✅ Selah complete. Streak: ${prefs.streakCount}")
         _showCompletion.value = true

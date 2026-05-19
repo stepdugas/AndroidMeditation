@@ -1,5 +1,6 @@
 package com.thesecretplace.app.ui.screens.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -37,7 +38,9 @@ fun PlayerScreen(
     navController: NavController,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
-    val meditation by viewModel.getMeditation(meditationId).collectAsState(null)
+    // Stable flow reference — avoids creating a new StateFlow on every recomposition
+    val meditationFlow = remember(meditationId) { viewModel.getMeditation(meditationId) }
+    val meditation by meditationFlow.collectAsState()
     if (meditation == null) {
         ThemedBackground {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -55,8 +58,8 @@ fun PlayerScreen(
     val isRepeating by viewModel.isRepeating.collectAsState()
     val showCompletion by viewModel.showCompletion.collectAsState()
 
-    // Start playback when meditation is loaded
-    LaunchedEffect(meditation) {
+    // Start playback once when screen opens
+    LaunchedEffect(meditationId) {
         meditation?.let { viewModel.startPlayback(it) }
     }
 
@@ -65,6 +68,12 @@ fun PlayerScreen(
         if (audioState.didFinish) {
             meditation?.let { viewModel.onMeditationCompleted(it) }
         }
+    }
+
+    // Stop audio when system back button/gesture is used
+    BackHandler {
+        viewModel.stop()
+        navController.popBackStack()
     }
 
     if (showCompletion) {

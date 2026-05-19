@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thesecretplace.app.data.PreferencesManager
 import com.thesecretplace.app.data.sampleMeditations
+import com.thesecretplace.app.health.HealthConnectManager
 import com.thesecretplace.app.model.Meditation
 import com.thesecretplace.app.network.SupabaseRepository
 import com.thesecretplace.app.service.AudioServiceConnection
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class PlayerViewModel @Inject constructor(
     private val prefs: PreferencesManager,
     private val audioConnection: AudioServiceConnection,
-    private val supabase: SupabaseRepository
+    private val supabase: SupabaseRepository,
+    private val healthConnect: HealthConnectManager
 ) : ViewModel() {
 
     val audioState: StateFlow<AudioState> = audioConnection.audioState
@@ -37,7 +39,17 @@ class PlayerViewModel @Inject constructor(
     init {
         audioConnection.connect()
         viewModelScope.launch {
-            try { _cloudMeditations.value = supabase.fetchMeditations() } catch (_: Exception) {}
+            try {
+                val cloud = supabase.fetchMeditations()
+                // For meditations that exist locally, clear remoteAudioURL
+                // so we use the bundled MP3 instead of downloading
+                val localById = sampleMeditations.associateBy { it.id }
+                _cloudMeditations.value = cloud.map { item ->
+                    val local = localById[item.id]
+                    if (local != null) item.copy(audioFileName = local.audioFileName, remoteAudioURL = null)
+                    else item
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -116,7 +128,20 @@ class PlayerViewModel @Inject constructor(
 
     fun onMeditationCompleted(meditation: Meditation) {
         audioConnection.consumeFinishEvent()
-        recordCompletion(meditation)
+        try {
+            recordCompletion(meditation)
+        } catch (e: Exception) {
+            println("❌ recordCompletion failed: ${e.message}")
+        }
+        // Log to Google Health Connect if enabled in settings
+        if (prefs.healthConnectEnabled) {
+            val durationMs = audioState.value.duration
+            if (durationMs > 0) {
+                viewModelScope.launch {
+                    try { healthConnect.logMindfulSession(durationMs) } catch (_: Exception) {}
+                }
+            }
+        }
         _showCompletion.value = true
     }
 

@@ -38,7 +38,8 @@ fun DetailScreen(
     navController: NavController,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
-    val meditation by viewModel.getMeditation(meditationId).collectAsState(null)
+    val meditationFlow = remember(meditationId) { viewModel.getMeditation(meditationId) }
+    val meditation by meditationFlow.collectAsState()
     val isFavorite by viewModel.isFavorite(meditationId).collectAsState(false)
     val showIntention by viewModel.showIntentionScreen.collectAsState()
 
@@ -65,12 +66,10 @@ fun DetailScreen(
                     .statusBarsPadding()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Accent, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Back", color = Accent, fontSize = 16.sp)
-                    }
+                TextButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Back", color = Accent, fontSize = 16.sp)
                 }
             }
 

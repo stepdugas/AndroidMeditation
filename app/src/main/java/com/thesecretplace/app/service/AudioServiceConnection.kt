@@ -68,13 +68,21 @@ class AudioServiceConnection @Inject constructor(
                             } else {
                                 _audioState.value = _audioState.value.copy(
                                     isPlaying = false,
-                                    didFinish = true,
-                                    nowPlayingMeditationId = ""
+                                    didFinish = true
                                 )
                                 stopPositionUpdates()
                                 println("✅ Playback finished")
                             }
                         }
+                    }
+
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        println("❌ ExoPlayer error: ${error.message}")
+                        _audioState.value = _audioState.value.copy(
+                            isPlaying = false,
+                            isDownloading = false
+                        )
+                        stopPositionUpdates()
                     }
                 })
             }
@@ -214,7 +222,10 @@ class AudioServiceConnection @Inject constructor(
     }
 
     fun consumeFinishEvent() {
-        _audioState.value = _audioState.value.copy(didFinish = false)
+        _audioState.value = _audioState.value.copy(
+            didFinish = false,
+            nowPlayingMeditationId = ""
+        )
     }
 
     fun disconnect() {

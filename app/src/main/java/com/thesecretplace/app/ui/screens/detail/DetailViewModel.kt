@@ -24,7 +24,15 @@ class DetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            try { _cloudMeditations.value = supabase.fetchMeditations() } catch (_: Exception) {}
+            try {
+                val cloud = supabase.fetchMeditations()
+                val localById = sampleMeditations.associateBy { it.id }
+                _cloudMeditations.value = cloud.map { item ->
+                    val local = localById[item.id]
+                    if (local != null) item.copy(audioFileName = local.audioFileName, remoteAudioURL = null)
+                    else item
+                }
+            } catch (_: Exception) {}
         }
     }
 

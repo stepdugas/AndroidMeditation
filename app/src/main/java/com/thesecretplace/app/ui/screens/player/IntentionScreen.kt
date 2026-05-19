@@ -1,5 +1,6 @@
 package com.thesecretplace.app.ui.screens.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -51,15 +53,35 @@ fun IntentionScreen(
 
     val intentions = listOf("Relax", "Clear My Mind", "Feel Grateful", "Breathe Deeply", "Let Go of Stress")
 
+    BackHandler { navController.popBackStack() }
+
     ThemedBackground(modifier = Modifier.alpha(alpha)) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            Spacer(modifier = Modifier.height(52.dp))
+            // Back button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                TextButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Back", color = Accent, fontSize = 16.sp)
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp)
+            ) {
+                Spacer(modifier = Modifier.height(20.dp))
 
             // Icon
             Box(contentAlignment = Alignment.Center) {
@@ -155,6 +177,7 @@ fun IntentionScreen(
             }
 
             Spacer(modifier = Modifier.height(52.dp))
+            }
         }
     }
 }
