@@ -83,7 +83,10 @@ fun PlayerScreen(
             onReplay = { viewModel.replay(med) },
             onDone = {
                 viewModel.stop()
-                navController.popBackStack()
+                navController.navigate(Routes.HOME) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                    launchSingleTop = true
+                }
             },
             onReflect = {
                 viewModel.stop()
