@@ -57,26 +57,11 @@ class MainViewModel @Inject constructor(
     fun refreshCatalog() {
         viewModelScope.launch {
             try {
-                val cloudItems = supabase.fetchMeditations()
-                val localById = sampleMeditations.associateBy { it.id }
-                // Merge: for meditations that exist locally, keep bundled audio
-                // instead of remote URL so playback doesn't depend on network
-                val merged = cloudItems.map { cloud ->
-                    val local = localById[cloud.id]
-                    if (local != null) {
-                        // Keep cloud metadata but use local bundled audio
-                        cloud.copy(
-                            audioFileName = local.audioFileName,
-                            remoteAudioURL = null
-                        )
-                    } else {
-                        cloud
-                    }
-                }
-                val cloudIDs = cloudItems.map { it.id }.toSet()
-                val localOnly = sampleMeditations.filter { it.id !in cloudIDs }
-                _allMeditations.value = merged + localOnly
-                println("✅ Catalog: ${merged.size} cloud (${merged.count { localById.containsKey(it.id) }} with local audio) + ${localOnly.size} local-only = ${_allMeditations.value.size} total")
+                val cloud = supabase.fetchMeditations()
+                val cloudIds = cloud.map { it.id }.toSet()
+                val localOnly = sampleMeditations.filter { it.id !in cloudIds }
+                _allMeditations.value = cloud + localOnly
+                println("✅ Catalog: ${cloud.size} cloud + ${localOnly.size} local-only = ${_allMeditations.value.size} total")
             } catch (e: Exception) {
                 println("⚠️ Catalog fetch failed: ${e.message}")
             }

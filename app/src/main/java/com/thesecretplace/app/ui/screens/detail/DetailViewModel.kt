@@ -25,26 +25,20 @@ class DetailViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             try {
-                val cloud = supabase.fetchMeditations()
-                val localById = sampleMeditations.associateBy { it.id }
-                _cloudMeditations.value = cloud.map { item ->
-                    val local = localById[item.id]
-                    if (local != null) item.copy(audioFileName = local.audioFileName, remoteAudioURL = null)
-                    else item
-                }
+                _cloudMeditations.value = supabase.fetchMeditations()
             } catch (_: Exception) {}
         }
     }
 
     fun findMeditation(id: String): Meditation? {
-        return sampleMeditations.find { it.id == id }
-            ?: _cloudMeditations.value.find { it.id == id }
+        return _cloudMeditations.value.find { it.id == id }
+            ?: sampleMeditations.find { it.id == id }
     }
 
     // Reactive version — re-emits when cloud data arrives
     fun getMeditation(id: String): StateFlow<Meditation?> {
         return _cloudMeditations.map {
-            sampleMeditations.find { it.id == id } ?: _cloudMeditations.value.find { it.id == id }
+            _cloudMeditations.value.find { it.id == id } ?: sampleMeditations.find { it.id == id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), findMeditation(id))
     }
 

@@ -61,9 +61,10 @@ fun MainScreen(
         }
     }
 
-    // Connect audio service
+    // Connect audio service and billing
     LaunchedEffect(Unit) {
         viewModel.connectAudio()
+        viewModel.connectBilling()
         viewModel.refreshCatalog()
     }
 

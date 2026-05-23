@@ -96,7 +96,10 @@ class SupabaseRepository @Inject constructor() {
                     title = title,
                     duration = duration,
                     description = description,
-                    imageName = imageName.replace("-", "_"),
+                    imageName = imageName
+                        .replace("-", "_")
+                        .replace(Regex("([a-z])([A-Z])")) { "${it.groupValues[1]}_${it.groupValues[2]}" }
+                        .lowercase(),
                     audioFileName = id,
                     category = category,
                     secondaryCategory = secondaryCategory,

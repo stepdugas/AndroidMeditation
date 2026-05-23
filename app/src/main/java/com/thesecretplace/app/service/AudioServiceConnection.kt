@@ -1,13 +1,16 @@
 package com.thesecretplace.app.service
 
+import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +34,7 @@ data class AudioState(
 class AudioServiceConnection @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private var player: ExoPlayer? = null
+    private var controller: MediaController? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var positionUpdateJob: Job? = null
 
@@ -41,20 +44,15 @@ class AudioServiceConnection @Inject constructor(
     private var looping = false
 
     fun connect() {
-        if (player != null) return
-        player = ExoPlayer.Builder(context)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
-            .build()
-            .also { exo ->
-                exo.addListener(object : Player.Listener {
+        if (controller != null) return
+
+        val sessionToken = SessionToken(context, ComponentName(context, AudioService::class.java))
+        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+
+        controllerFuture.addListener({
+            try {
+                controller = controllerFuture.get()
+                controller?.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         _audioState.value = _audioState.value.copy(isPlaying = isPlaying)
                         if (isPlaying) startPositionUpdates() else stopPositionUpdates()
@@ -63,8 +61,8 @@ class AudioServiceConnection @Inject constructor(
                     override fun onPlaybackStateChanged(state: Int) {
                         if (state == Player.STATE_ENDED) {
                             if (looping) {
-                                exo.seekTo(0)
-                                exo.play()
+                                controller?.seekTo(0)
+                                controller?.play()
                             } else {
                                 _audioState.value = _audioState.value.copy(
                                     isPlaying = false,
@@ -77,7 +75,7 @@ class AudioServiceConnection @Inject constructor(
                     }
 
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        println("❌ ExoPlayer error: ${error.message}")
+                        println("❌ Player error: ${error.message}")
                         _audioState.value = _audioState.value.copy(
                             isPlaying = false,
                             isDownloading = false
@@ -85,18 +83,21 @@ class AudioServiceConnection @Inject constructor(
                         stopPositionUpdates()
                     }
                 })
+                println("✅ MediaController connected to AudioService")
+            } catch (e: Exception) {
+                println("❌ MediaController connection failed: ${e.message}")
             }
-        println("✅ ExoPlayer initialized")
+        }, MoreExecutors.directExecutor())
     }
 
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
         positionUpdateJob = scope.launch {
             while (isActive) {
-                player?.let { exo ->
+                controller?.let { ctrl ->
                     _audioState.value = _audioState.value.copy(
-                        currentPosition = exo.currentPosition.coerceAtLeast(0),
-                        duration = exo.duration.coerceAtLeast(0)
+                        currentPosition = ctrl.currentPosition.coerceAtLeast(0),
+                        duration = ctrl.duration.coerceAtLeast(0)
                     )
                 }
                 delay(500)
@@ -109,13 +110,13 @@ class AudioServiceConnection @Inject constructor(
     }
 
     // Play bundled audio from res/raw
+    @androidx.annotation.OptIn(UnstableApi::class)
     fun playAudio(
         fileName: String,
         title: String = "",
         meditationId: String = "",
         loop: Boolean = false
     ) {
-        // Convert camelCase to snake_case for Android resource naming
         val snakeName = fileName.replace(Regex("([a-z])([A-Z])")) {
             "${it.groupValues[1]}_${it.groupValues[2]}"
         }.lowercase()
@@ -124,16 +125,26 @@ class AudioServiceConnection @Inject constructor(
             println("❌ Audio file $fileName ($snakeName) not found in res/raw")
             return
         }
-        val uri = Uri.parse("android.resource://${context.packageName}/$resId")
+        val uri = RawResourceDataSource.buildRawResourceUri(resId)
         playUri(uri, title, meditationId, loop)
     }
 
     // Play from a URI (local file or remote)
     fun playUri(uri: Uri, title: String, meditationId: String, loop: Boolean = false) {
-        val exo = player ?: run {
-            println("❌ ExoPlayer not initialized — calling connect()")
+        val ctrl = controller ?: run {
+            println("⏳ MediaController not ready — queuing playback")
             connect()
-            player ?: return
+            // Retry after connection establishes
+            scope.launch {
+                var attempts = 0
+                while (controller == null && attempts < 20) {
+                    delay(100)
+                    attempts++
+                }
+                controller?.let { playUri(uri, title, meditationId, loop) }
+                    ?: println("❌ MediaController failed to connect after retries")
+            }
+            return
         }
 
         looping = loop
@@ -154,9 +165,9 @@ class AudioServiceConnection @Inject constructor(
             )
             .build()
 
-        exo.setMediaItem(mediaItem)
-        exo.prepare()
-        exo.play()
+        ctrl.setMediaItem(mediaItem)
+        ctrl.prepare()
+        ctrl.play()
         println("✅ Playing: $title (uri: $uri)")
     }
 
@@ -197,23 +208,37 @@ class AudioServiceConnection @Inject constructor(
         playUri(Uri.fromFile(cacheFile), title, meditationId)
     }
 
+    fun hasCachedAudio(meditationId: String): Boolean {
+        val cacheFile = File(File(context.cacheDir, "meditations"), "$meditationId.mp3")
+        return cacheFile.exists()
+    }
+
+    fun playCached(meditationId: String, title: String) {
+        val cacheFile = File(File(context.cacheDir, "meditations"), "$meditationId.mp3")
+        if (cacheFile.exists()) {
+            playUri(Uri.fromFile(cacheFile), title, meditationId)
+        } else {
+            println("❌ No cached audio for $meditationId")
+        }
+    }
+
     fun pause() {
-        player?.pause()
+        controller?.pause()
     }
 
     fun resume() {
-        player?.play()
+        controller?.play()
     }
 
     fun stop() {
-        player?.stop()
-        player?.clearMediaItems()
+        controller?.stop()
+        controller?.clearMediaItems()
         _audioState.value = AudioState()
         stopPositionUpdates()
     }
 
     fun seekTo(positionMs: Long) {
-        player?.seekTo(positionMs)
+        controller?.seekTo(positionMs)
         _audioState.value = _audioState.value.copy(currentPosition = positionMs)
     }
 
@@ -231,7 +256,7 @@ class AudioServiceConnection @Inject constructor(
     fun disconnect() {
         scope.cancel()
         stopPositionUpdates()
-        player?.release()
-        player = null
+        controller?.release()
+        controller = null
     }
 }

@@ -17,7 +17,6 @@ object Routes {
     const val DETAIL = "detail/{meditationId}"
     const val PLAYER = "player/{meditationId}"
     const val INTENTION = "intention/{meditationId}"
-
     fun detail(id: String) = "detail/$id"
     fun player(id: String) = "player/$id"
     fun intention(id: String) = "intention/$id"

@@ -22,8 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.thesecretplace.app.data.local.JournalEntity
 import com.thesecretplace.app.model.Meditation
 import com.thesecretplace.app.ui.components.*
+import com.thesecretplace.app.ui.screens.journal.ReflectionBottomSheet
 import com.thesecretplace.app.ui.theme.*
 import com.thesecretplace.app.util.HapticUtil
 import com.thesecretplace.app.util.ShareUtil
@@ -35,10 +37,11 @@ fun CompletionScreen(
     streakCount: Int,
     onReplay: () -> Unit,
     onDone: () -> Unit,
-    onReflect: (() -> Unit)? = null
+    onSaveJournalEntry: ((JournalEntity) -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var visible by remember { mutableStateOf(false) }
+    var showReflection by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(850),
@@ -219,12 +222,12 @@ fun CompletionScreen(
                 }
             }
 
-            // Reflect button (only shown when onReflect is provided)
-            if (onReflect != null) {
+            // Reflect button (only shown when onSaveJournalEntry is provided)
+            if (onSaveJournalEntry != null) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = onReflect,
+                    onClick = { showReflection = true },
                     shape = RoundedCornerShape(ButtonRadius),
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = Surface.copy(alpha = 0.85f)),
                     modifier = Modifier.fillMaxWidth().height(52.dp)
@@ -241,5 +244,15 @@ fun CompletionScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    // Reflection bottom sheet — matches iOS ReflectionPromptSheet
+    if (showReflection && onSaveJournalEntry != null) {
+        ReflectionBottomSheet(
+            meditationId = meditation.id,
+            meditationTitle = meditation.title,
+            onSave = onSaveJournalEntry,
+            onDismiss = { showReflection = false }
+        )
     }
 }

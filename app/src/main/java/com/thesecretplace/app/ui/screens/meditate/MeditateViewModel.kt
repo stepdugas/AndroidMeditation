@@ -35,15 +35,9 @@ class MeditateViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val cloud = supabase.fetchMeditations()
-                val localById = sampleMeditations.associateBy { it.id }
-                val merged = cloud.map { item ->
-                    val local = localById[item.id]
-                    if (local != null) item.copy(audioFileName = local.audioFileName, remoteAudioURL = null)
-                    else item
-                }
                 val cloudIds = cloud.map { it.id }.toSet()
                 val localOnly = sampleMeditations.filter { it.id !in cloudIds }
-                _allMeditations.value = merged + localOnly
+                _allMeditations.value = cloud + localOnly
             } catch (_: Exception) { }
         }
     }

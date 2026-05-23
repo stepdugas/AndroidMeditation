@@ -58,9 +58,10 @@ fun PlayerScreen(
     val isRepeating by viewModel.isRepeating.collectAsState()
     val showCompletion by viewModel.showCompletion.collectAsState()
 
-    // Start playback once when screen opens
-    LaunchedEffect(meditationId) {
-        meditation?.let { viewModel.startPlayback(it) }
+    // Start playback when meditation is available with audio URL
+    // Re-triggers if cloud data loads after initial local fallback
+    LaunchedEffect(meditationId, med.remoteAudioURL) {
+        viewModel.startPlayback(med)
     }
 
     // Handle completion
@@ -88,11 +89,8 @@ fun PlayerScreen(
                     launchSingleTop = true
                 }
             },
-            onReflect = {
-                viewModel.stop()
-                navController.navigate(Routes.JOURNAL) {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                }
+            onSaveJournalEntry = { entry ->
+                viewModel.saveJournalEntry(entry)
             }
         )
         return

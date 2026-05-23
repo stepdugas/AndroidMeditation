@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+    <uses-permission android:name="android.permission.health.WRITE_MINDFULNESS" />
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <application
@@ -39,6 +41,16 @@
                 <data android:scheme="meditationapp" />
             </intent-filter>
         </activity>
+
+        <!-- Media playback service — keeps audio alive in background -->
+        <service
+            android:name=".service.AudioService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
         <!-- Boot receiver for rescheduling daily reminders -->
         <receiver

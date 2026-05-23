@@ -3,6 +3,8 @@ package com.thesecretplace.app.ui.screens.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thesecretplace.app.data.PreferencesManager
+import com.thesecretplace.app.data.local.JournalDao
+import com.thesecretplace.app.data.local.JournalEntity
 import com.thesecretplace.app.data.sampleMeditations
 import com.thesecretplace.app.health.HealthConnectManager
 import com.thesecretplace.app.model.Meditation
@@ -21,7 +23,8 @@ class PlayerViewModel @Inject constructor(
     private val prefs: PreferencesManager,
     private val audioConnection: AudioServiceConnection,
     private val supabase: SupabaseRepository,
-    private val healthConnect: HealthConnectManager
+    private val healthConnect: HealthConnectManager,
+    private val journalDao: JournalDao
 ) : ViewModel() {
 
     val audioState: StateFlow<AudioState> = audioConnection.audioState
@@ -40,27 +43,20 @@ class PlayerViewModel @Inject constructor(
         audioConnection.connect()
         viewModelScope.launch {
             try {
-                val cloud = supabase.fetchMeditations()
-                // For meditations that exist locally, clear remoteAudioURL
-                // so we use the bundled MP3 instead of downloading
-                val localById = sampleMeditations.associateBy { it.id }
-                _cloudMeditations.value = cloud.map { item ->
-                    val local = localById[item.id]
-                    if (local != null) item.copy(audioFileName = local.audioFileName, remoteAudioURL = null)
-                    else item
-                }
+                _cloudMeditations.value = supabase.fetchMeditations()
             } catch (_: Exception) {}
         }
     }
 
     fun findMeditation(id: String): Meditation? {
-        return sampleMeditations.find { it.id == id }
-            ?: _cloudMeditations.value.find { it.id == id }
+        // Prefer cloud (has remoteAudioURL), fall back to local catalog
+        return _cloudMeditations.value.find { it.id == id }
+            ?: sampleMeditations.find { it.id == id }
     }
 
     fun getMeditation(id: String): StateFlow<Meditation?> {
         return _cloudMeditations.map {
-            sampleMeditations.find { it.id == id } ?: _cloudMeditations.value.find { it.id == id }
+            _cloudMeditations.value.find { it.id == id } ?: sampleMeditations.find { it.id == id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), findMeditation(id))
     }
 
@@ -84,11 +80,16 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         } else {
-            audioConnection.playAudio(
-                fileName = meditation.audioFileName,
-                title = meditation.title,
-                meditationId = meditation.id
-            )
+            // No remote URL — try cached download first, then local res/raw as last resort
+            if (audioConnection.hasCachedAudio(meditation.id)) {
+                audioConnection.playCached(meditation.id, meditation.title)
+            } else {
+                audioConnection.playAudio(
+                    fileName = meditation.audioFileName,
+                    title = meditation.title,
+                    meditationId = meditation.id
+                )
+            }
         }
     }
 
@@ -146,6 +147,10 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun getStreakCount(): Int = prefs.streakCount
+
+    fun saveJournalEntry(entry: JournalEntity) {
+        viewModelScope.launch { journalDao.insert(entry) }
+    }
 
     private fun recordCompletion(meditation: Meditation) {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
