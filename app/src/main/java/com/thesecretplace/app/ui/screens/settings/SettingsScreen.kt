@@ -211,7 +211,7 @@ fun SettingsScreen(
                     Spacer(Modifier.width(14.dp))
                     Text("Version", fontSize = 16.sp, color = Color.White)
                     Spacer(Modifier.weight(1f))
-                    Text("1.0.0 (1)", fontSize = 14.sp, color = Color.White.copy(0.42f))
+                    Text("${com.thesecretplace.app.BuildConfig.VERSION_NAME} (${com.thesecretplace.app.BuildConfig.VERSION_CODE})", fontSize = 14.sp, color = Color.White.copy(0.42f))
                 }
             }
 
