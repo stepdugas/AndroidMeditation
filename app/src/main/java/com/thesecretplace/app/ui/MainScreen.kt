@@ -183,10 +183,7 @@ private fun BottomNavBar(
         contentColor = Cream,
         tonalElevation = 0.dp
     ) {
-        val tabs = buildList {
-            addAll(BottomTab.entries)
-            if (adminUnlocked) add(null) // placeholder for admin
-        }
+        val tabs = BottomTab.entries
 
         for (tab in BottomTab.entries) {
             val selected = currentRoute == tab.route
@@ -215,26 +212,7 @@ private fun BottomNavBar(
             )
         }
 
-        if (adminUnlocked) {
-            NavigationBarItem(
-                selected = currentRoute == Routes.ADMIN,
-                onClick = {
-                    navController.navigate(Routes.ADMIN) {
-                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                },
-                icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
-                label = { Text("Admin") },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Accent,
-                    selectedTextColor = Accent,
-                    unselectedIconColor = Cream.copy(alpha = 0.5f),
-                    unselectedTextColor = Cream.copy(alpha = 0.5f),
-                    indicatorColor = Accent.copy(alpha = 0.12f)
-                )
-            )
-        }
+        // Admin is now accessed from Settings, not the bottom nav
     }
 }
 

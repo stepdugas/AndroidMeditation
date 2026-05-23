@@ -227,6 +227,26 @@ fun SettingsScreen(
                 )
             }
 
+            // Admin panel — only visible after tapping Version 7 times
+            if (showAdminToast || viewModel.isAdminUnlocked()) {
+                Spacer(Modifier.height(24.dp))
+                SettingsSection("Admin") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { navController.navigate(Routes.ADMIN) }
+                            .padding(16.dp)
+                    ) {
+                        SettingsIcon(Icons.Default.AdminPanelSettings, Accent)
+                        Spacer(Modifier.width(14.dp))
+                        Text("Admin Panel", fontSize = 16.sp, color = Color.White)
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+
             if (restoreToast != null) {
                 Spacer(Modifier.height(16.dp))
                 Text(

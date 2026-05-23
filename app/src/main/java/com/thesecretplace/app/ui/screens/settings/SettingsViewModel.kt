@@ -49,6 +49,8 @@ class SettingsViewModel @Inject constructor(
         prefs.adminUnlocked = true
     }
 
+    fun isAdminUnlocked(): Boolean = prefs.adminUnlocked
+
     fun restorePurchases() {
         if (_isRestoring.value) return
         _isRestoring.value = true
