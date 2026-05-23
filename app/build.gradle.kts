@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.thesecretplace.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.thesecretplace.app"
@@ -49,6 +49,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
     }
 
     androidResources {
@@ -112,7 +113,7 @@ dependencies {
     implementation("com.android.billingclient:billing-ktx:7.1.1")
 
     // Health Connect
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha10")
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     // Glance (Widgets)
     implementation("androidx.glance:glance-appwidget:1.1.1")

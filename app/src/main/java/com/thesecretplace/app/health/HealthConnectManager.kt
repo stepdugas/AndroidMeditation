@@ -1,11 +1,17 @@
+@file:OptIn(ExperimentalMindfulnessSessionApi::class)
+
 package com.thesecretplace.app.health
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,7 +28,7 @@ class HealthConnectManager @Inject constructor(
     }
 
     val permissions = setOf(
-        HealthPermission.getWritePermission(ExerciseSessionRecord::class)
+        HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
     )
 
     suspend fun logMindfulSession(durationMs: Long) {
@@ -32,17 +38,19 @@ class HealthConnectManager @Inject constructor(
         try {
             val endTime = Instant.now()
             val startTime = endTime.minusMillis(durationMs)
-            val record = ExerciseSessionRecord(
+            val zoneOffset = ZoneOffset.systemDefault().rules.getOffset(endTime)
+            val record = MindfulnessSessionRecord(
                 startTime = startTime,
-                startZoneOffset = null,
+                startZoneOffset = zoneOffset,
                 endTime = endTime,
-                endZoneOffset = null,
-                exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
+                endZoneOffset = zoneOffset,
+                metadata = Metadata.activelyRecorded(Device(type = Device.TYPE_PHONE)),
+                mindfulnessSessionType = MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION,
                 title = "The Secret Place Meditation"
             )
             client.insertRecords(listOf(record))
             val minutes = (durationMs / 60_000).toInt()
-            println("✅ Mindful session logged to Health Connect: $minutes min")
+            println("✅ Mindfulness session logged to Health Connect: $minutes min")
         } catch (e: Exception) {
             println("❌ Health Connect save failed: ${e.message}")
         }
