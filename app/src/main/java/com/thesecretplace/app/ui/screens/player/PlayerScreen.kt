@@ -58,10 +58,13 @@ fun PlayerScreen(
     val isRepeating by viewModel.isRepeating.collectAsState()
     val showCompletion by viewModel.showCompletion.collectAsState()
 
-    // Start playback when meditation is available with audio URL
-    // Re-triggers if cloud data loads after initial local fallback
+    // Start playback — prefer cloud version with remoteAudioURL
+    // Re-triggers when cloud data loads and remoteAudioURL becomes available
     LaunchedEffect(meditationId, med.remoteAudioURL) {
-        viewModel.startPlayback(med)
+        // Only play if we have a remote URL or a cached/local file
+        if (med.remoteAudioURL != null || viewModel.hasPlayableAudio(med)) {
+            viewModel.startPlayback(med)
+        }
     }
 
     // Handle completion

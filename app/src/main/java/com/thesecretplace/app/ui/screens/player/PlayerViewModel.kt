@@ -68,7 +68,9 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun startPlayback(meditation: Meditation) {
-        if (audioState.value.nowPlayingMeditationId == meditation.id) return
+        // Only skip if this meditation is already actively playing
+        val current = audioState.value
+        if (current.nowPlayingMeditationId == meditation.id && (current.isPlaying || current.duration > 0)) return
         _showCompletion.value = false
 
         if (meditation.remoteAudioURL != null) {
@@ -79,17 +81,15 @@ class PlayerViewModel @Inject constructor(
                     meditationId = meditation.id
                 )
             }
+        } else if (audioConnection.hasCachedAudio(meditation.id)) {
+            audioConnection.playCached(meditation.id, meditation.title)
         } else {
-            // No remote URL — try cached download first, then local res/raw as last resort
-            if (audioConnection.hasCachedAudio(meditation.id)) {
-                audioConnection.playCached(meditation.id, meditation.title)
-            } else {
-                audioConnection.playAudio(
-                    fileName = meditation.audioFileName,
-                    title = meditation.title,
-                    meditationId = meditation.id
-                )
-            }
+            // Local res/raw fallback (ambient sounds only)
+            audioConnection.playAudio(
+                fileName = meditation.audioFileName,
+                title = meditation.title,
+                meditationId = meditation.id
+            )
         }
     }
 
@@ -144,6 +144,10 @@ class PlayerViewModel @Inject constructor(
             }
         }
         _showCompletion.value = true
+    }
+
+    fun hasPlayableAudio(meditation: Meditation): Boolean {
+        return meditation.remoteAudioURL != null || audioConnection.hasCachedAudio(meditation.id)
     }
 
     fun getStreakCount(): Int = prefs.streakCount

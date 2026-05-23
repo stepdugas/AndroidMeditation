@@ -35,6 +35,8 @@ fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
     val showIntention by viewModel.showIntention.collectAsState()
     val healthEnabled by viewModel.healthEnabled.collectAsState()
+    val isRestoring by viewModel.isRestoring.collectAsState()
+    val restoreToast by viewModel.restoreToast.collectAsState()
     var adminTapCount by remember { mutableIntStateOf(0) }
     var showAdminToast by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -148,8 +150,26 @@ fun SettingsScreen(
 
             // Subscription
             SettingsSection("Subscription") {
-                SettingsNavRow(Icons.Default.Restore, Accent, "Restore Purchases") {
-                    viewModel.restorePurchases()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isRestoring) { viewModel.restorePurchases() }
+                        .padding(16.dp)
+                ) {
+                    SettingsIcon(Icons.Default.Restore, Accent)
+                    Spacer(Modifier.width(14.dp))
+                    Text("Restore Purchases", fontSize = 16.sp, color = Color.White)
+                    Spacer(Modifier.weight(1f))
+                    if (isRestoring) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White.copy(0.5f),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.White.copy(0.28f), modifier = Modifier.size(12.dp))
+                    }
                 }
             }
 
@@ -205,6 +225,22 @@ fun SettingsScreen(
                         .background(Accent, RoundedCornerShape(50))
                         .padding(horizontal = 18.dp, vertical = 10.dp)
                 )
+            }
+
+            if (restoreToast != null) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    restoreToast ?: "",
+                    fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Black,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .background(Accent, RoundedCornerShape(50))
+                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                )
+                LaunchedEffect(restoreToast) {
+                    kotlinx.coroutines.delay(3000)
+                    viewModel.clearRestoreToast()
+                }
             }
 
             Spacer(Modifier.height(28.dp))
