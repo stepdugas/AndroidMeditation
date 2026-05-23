@@ -73,6 +73,7 @@ class AudioServiceConnection @Inject constructor(
                                     didFinish = true
                                 )
                                 stopPositionUpdates()
+                                AudioService.stop(context)
                                 println("✅ Playback finished")
                             }
                         }
@@ -160,6 +161,8 @@ class AudioServiceConnection @Inject constructor(
         exo.setMediaItem(mediaItem)
         exo.prepare()
         exo.play()
+        // Start foreground service to keep audio alive in background
+        AudioService.start(context, title)
         println("✅ Playing: $title (uri: $uri)")
     }
 
@@ -227,6 +230,7 @@ class AudioServiceConnection @Inject constructor(
         player?.clearMediaItems()
         _audioState.value = AudioState()
         stopPositionUpdates()
+        AudioService.stop(context)
     }
 
     fun seekTo(positionMs: Long) {

@@ -1,65 +1,90 @@
 package com.thesecretplace.app.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
 import android.content.Intent
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
 import com.thesecretplace.app.MainActivity
+import com.thesecretplace.app.R
 
-class AudioService : MediaSessionService() {
+class AudioService : Service() {
 
-    private var mediaSession: MediaSession? = null
+    companion object {
+        private const val CHANNEL_ID = "meditation_playback"
+        private const val NOTIFICATION_ID = 1
+
+        fun start(context: Context, title: String) {
+            val intent = Intent(context, AudioService::class.java).apply {
+                putExtra("title", title)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, AudioService::class.java))
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
+    }
 
-        val player = ExoPlayer.Builder(this)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true // handleAudioFocus
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
-            .build()
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val title = intent?.getStringExtra("title") ?: "Meditation"
+        startForeground(NOTIFICATION_ID, buildNotification(title))
+        println("✅ AudioService foreground started: $title")
+        return START_STICKY
+    }
 
-        val intent = Intent(this, MainActivity::class.java)
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        println("✅ AudioService stopped")
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Meditation Playback",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows while a meditation is playing"
+                setShowBadge(false)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(title: String): Notification {
+        val tapIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            this, 0, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        mediaSession = MediaSession.Builder(this, player)
-            .setSessionActivity(pendingIntent)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("The Secret Place")
+            .setContentText(title)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
-
-        println("✅ AudioService created with MediaSession")
-    }
-
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
-    }
-
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
-            stopSelf()
-        }
-        // If still playing, let the service continue (foreground notification keeps it alive)
-    }
-
-    override fun onDestroy() {
-        mediaSession?.run {
-            player.release()
-            release()
-        }
-        mediaSession = null
-        super.onDestroy()
-        println("✅ AudioService destroyed")
     }
 }

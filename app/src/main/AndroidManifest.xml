@@ -42,15 +42,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Media playback service — keeps audio alive in background -->
+        <!-- Foreground service — keeps audio alive when app is in background -->
         <service
             android:name=".service.AudioService"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback">
-            <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
-            </intent-filter>
-        </service>
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Boot receiver for rescheduling daily reminders -->
         <receiver
