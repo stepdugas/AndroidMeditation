@@ -379,35 +379,37 @@ private fun CategoryPicker(
     onSelect: (MeditationCategory) -> Unit,
     allowNone: Boolean = false
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        if (allowNone) {
-            FilterChip(
-                selected = selected == null,
-                onClick = { onSelect(selected ?: MeditationCategory.MORNING) },
-                label = { Text("None", fontSize = 12.sp) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Accent.copy(alpha = 0.2f),
-                    selectedLabelColor = Accent,
-                    labelColor = Color.White.copy(alpha = 0.6f)
-                )
-            )
+    var expanded by remember { mutableStateOf(false) }
+    val displayText = selected?.displayName ?: "None"
+
+    Box {
+        OutlinedButton(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.08f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(displayText, color = selected?.color ?: Color.White.copy(alpha = 0.6f), modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ArrowDropDown, null, tint = Color.White.copy(alpha = 0.5f))
         }
-        MeditationCategory.entries.forEach { cat ->
-            FilterChip(
-                selected = cat == selected,
-                onClick = { onSelect(cat) },
-                label = { Text(cat.displayName, fontSize = 12.sp) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = cat.color.copy(alpha = 0.2f),
-                    selectedLabelColor = cat.color,
-                    labelColor = Color.White.copy(alpha = 0.6f)
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Surface)
+        ) {
+            if (allowNone) {
+                DropdownMenuItem(
+                    text = { Text("None", color = if (selected == null) Accent else Color.White.copy(alpha = 0.7f)) },
+                    onClick = { onSelect(selected ?: MeditationCategory.MORNING); expanded = false }
                 )
-            )
+            }
+            MeditationCategory.entries.forEach { cat ->
+                DropdownMenuItem(
+                    text = { Text(cat.displayName, color = if (cat == selected) cat.color else Color.White.copy(alpha = 0.7f)) },
+                    onClick = { onSelect(cat); expanded = false }
+                )
+            }
         }
     }
 }
