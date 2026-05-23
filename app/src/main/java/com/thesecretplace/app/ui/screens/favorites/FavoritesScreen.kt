@@ -1,5 +1,8 @@
 package com.thesecretplace.app.ui.screens.favorites
 
+import androidx.lifecycle.viewModelScope
+import com.thesecretplace.app.network.SupabaseRepository
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -131,7 +134,8 @@ private fun FavoriteRow(meditation: Meditation, onClick: () -> Unit) {
 
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
-    private val prefs: PreferencesManager
+    private val prefs: PreferencesManager,
+    private val supabase: SupabaseRepository
 ) : ViewModel() {
     private val _favorites = MutableStateFlow<List<Meditation>>(emptyList())
     val favorites: StateFlow<List<Meditation>> = _favorites
@@ -140,6 +144,19 @@ class FavoritesViewModel @Inject constructor(
 
     fun refresh() {
         val ids = prefs.favoriteMeditationIDs.split(",").filter { it.isNotEmpty() }.toSet()
-        _favorites.value = sampleMeditations.filter { it.id in ids }
+        // Search both local and cloud meditations
+        val localMatches = sampleMeditations.filter { it.id in ids }
+        _favorites.value = localMatches
+
+        // Also fetch cloud meditations to include cloud-only favorites
+        viewModelScope.launch {
+            try {
+                val cloud = supabase.fetchMeditations()
+                val cloudIds = cloud.map { it.id }.toSet()
+                val localOnly = sampleMeditations.filter { it.id in ids && it.id !in cloudIds }
+                val cloudMatches = cloud.filter { it.id in ids }
+                _favorites.value = cloudMatches + localOnly
+            } catch (_: Exception) { }
+        }
     }
 }

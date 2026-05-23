@@ -564,7 +564,12 @@ private fun EditMeditationSheet(
     var duration by remember { mutableStateOf(meditation.duration) }
     var category by remember { mutableStateOf(meditation.category) }
     var secondaryCategory by remember { mutableStateOf(meditation.secondaryCategory) }
-    var imageName by remember { mutableStateOf(meditation.imageName) }
+    // Find the iOS-format image name that matches this meditation's Android-format name
+    var imageName by remember {
+        val androidName = meditation.imageName
+        val iosMatch = imageOptions.find { toAndroidDrawableName(it) == androidName }
+        mutableStateOf(iosMatch ?: androidName)
+    }
     var isNew by remember { mutableStateOf(meditation.isNew) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
