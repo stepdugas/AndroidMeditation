@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -201,7 +203,23 @@ private fun BottomNavBar(
                         contentDescription = tab.label
                     )
                 },
-                label = { Text(tab.label) },
+                label = {
+                    // Cap font scale at 1.0 so users with max system font don't see
+                    // cut-off labels — accessibility still applies everywhere else.
+                    val density = LocalDensity.current
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(
+                            density = density.density,
+                            fontScale = density.fontScale.coerceAtMost(1f)
+                        )
+                    ) {
+                        Text(
+                            text = tab.label,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = Accent,
                     selectedTextColor = Accent,

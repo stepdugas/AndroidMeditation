@@ -49,14 +49,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun findMeditation(id: String): Meditation? {
-        // Prefer cloud (has remoteAudioURL), fall back to local catalog
         return _cloudMeditations.value.find { it.id == id }
-            ?: sampleMeditations.find { it.id == id }
     }
 
     fun getMeditation(id: String): StateFlow<Meditation?> {
         return _cloudMeditations.map {
-            _cloudMeditations.value.find { it.id == id } ?: sampleMeditations.find { it.id == id }
+            it.find { m -> m.id == id }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), findMeditation(id))
     }
 

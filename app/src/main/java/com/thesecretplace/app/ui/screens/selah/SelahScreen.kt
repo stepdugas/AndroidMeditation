@@ -101,22 +101,13 @@ fun SelahScreen(viewModel: SelahViewModel = hiltViewModel()) {
 
             // Settings pickers (shown when not active)
             if (!sessionActive) {
-                // Duration picker
-                var showDurationMenu by remember { mutableStateOf(false) }
-                Box {
-                    PickerRow(icon = Icons.Default.Timer, label = "Duration", value = "$selectedMinutes min",
-                        onClick = { showDurationMenu = true })
-                    DropdownMenu(expanded = showDurationMenu, onDismissRequest = { showDurationMenu = false }) {
-                        listOf(5, 10, 15, 20, 30, 45, 60).forEach { min ->
-                            DropdownMenuItem(
-                                text = { Text("$min minutes") },
-                                onClick = { viewModel.setMinutes(min); showDurationMenu = false }
-                            )
-                        }
-                    }
-                }
+                // Duration: preset chips + custom dialog
+                DurationChipPicker(
+                    selected = selectedMinutes,
+                    onSelect = { viewModel.setMinutes(it) }
+                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Sound picker
                 var showSoundMenu by remember { mutableStateOf(false) }
@@ -197,6 +188,132 @@ private fun PickerRow(
         Spacer(modifier = Modifier.width(8.dp))
         Icon(Icons.Default.UnfoldMore, null, tint = Color.White.copy(0.30f), modifier = Modifier.size(11.dp))
     }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun DurationChipPicker(
+    selected: Int,
+    onSelect: (Int) -> Unit
+) {
+    val presets = listOf(1, 3, 5, 10)
+    val isCustom = selected !in presets
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+        ) {
+            Icon(Icons.Default.Timer, null, tint = Accent, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Duration", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(0.75f))
+        }
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            presets.forEach { min ->
+                DurationChip(
+                    label = "$min min",
+                    selected = !isCustom && selected == min,
+                    onClick = { onSelect(min) }
+                )
+            }
+            DurationChip(
+                label = if (isCustom) "Custom · $selected min" else "Custom",
+                selected = isCustom,
+                onClick = { showCustomDialog = true }
+            )
+        }
+    }
+
+    if (showCustomDialog) {
+        CustomDurationDialog(
+            initialMinutes = if (isCustom) selected else 7,
+            onConfirm = {
+                onSelect(it)
+                showCustomDialog = false
+            },
+            onDismiss = { showCustomDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun DurationChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) Accent else Surface.copy(alpha = 0.65f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) Color.Black else Color.White.copy(0.85f)
+        )
+    }
+}
+
+@Composable
+private fun CustomDurationDialog(
+    initialMinutes: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var minutes by remember { mutableStateOf(initialMinutes.coerceIn(1, 60)) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surface,
+        title = {
+            Text("Custom Duration", color = Color.White, fontWeight = FontWeight.SemiBold)
+        },
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                IconButton(
+                    onClick = { if (minutes > 1) minutes-- },
+                    enabled = minutes > 1
+                ) {
+                    Icon(Icons.Default.Remove, "Decrease", tint = Accent)
+                }
+                Text(
+                    text = "$minutes min",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+                IconButton(
+                    onClick = { if (minutes < 60) minutes++ },
+                    enabled = minutes < 60
+                ) {
+                    Icon(Icons.Default.Add, "Increase", tint = Accent)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(minutes) }) {
+                Text("Set", color = Accent, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.White.copy(0.65f))
+            }
+        }
+    )
 }
 
 @Composable

@@ -58,10 +58,11 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val cloud = supabase.fetchMeditations()
-                val cloudIds = cloud.map { it.id }.toSet()
-                val localOnly = sampleMeditations.filter { it.id !in cloudIds }
-                _allMeditations.value = cloud + localOnly
-                println("✅ Catalog: ${cloud.size} cloud + ${localOnly.size} local-only = ${_allMeditations.value.size} total")
+                // Cloud is the source of truth — deleting in admin must actually remove
+                // the meditation from the app. sampleMeditations remains only as the
+                // initial StateFlow seed so the list isn't empty before first fetch.
+                _allMeditations.value = cloud
+                println("✅ Catalog: ${cloud.size} cloud meditations loaded")
             } catch (e: Exception) {
                 println("⚠️ Catalog fetch failed: ${e.message}")
             }

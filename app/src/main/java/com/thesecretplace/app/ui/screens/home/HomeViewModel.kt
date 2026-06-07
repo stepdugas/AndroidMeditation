@@ -44,9 +44,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val cloud = supabase.fetchMeditations()
-                val cloudIds = cloud.map { it.id }.toSet()
-                val localOnly = sampleMeditations.filter { it.id !in cloudIds }
-                _allMeditations.value = cloud + localOnly
+                _allMeditations.value = cloud
             } catch (_: Exception) { }
         }
     }
